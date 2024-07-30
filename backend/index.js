@@ -5,7 +5,7 @@ const cors = require("cors")
 const bodyParse = require("body-parser")
 const app = express()
 
-mongoose.connect("mongodb://localhost:27017/payouts")
+mongoose.connect("mongodb://localhost:27017/payouts?replicaSet=rs")
 
 app.use(cors())
 

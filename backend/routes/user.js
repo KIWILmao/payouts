@@ -1,7 +1,7 @@
 const express = require("express")
 const z = require("zod")
 const { HASH_SECRET, JWT_SECRET } = require("../config.js")
-const { User } = require("../db.js")
+const { User, Account } = require("../db.js")
 const crypto = require("crypto")
 const jwt = require("jsonwebtoken")
 const { authMiddleware } = require("../middleware.js")
@@ -45,13 +45,14 @@ router.post("/signup", async (req, res) => {
     const user = await User.findOne({
         username: username,
     })
-    console.log(user)
 
     if (user) {
         return res.json({
             msg: "user already exists",
         })
     }
+
+    const randomAmount = Math.floor(Math.random() * 10000)
 
     const salt = crypto.randomBytes(64).toString("hex")
     const hashedPassword = crypto
@@ -66,7 +67,10 @@ router.post("/signup", async (req, res) => {
         firstname,
         lastname,
     })
-
+    await Account.create({
+        userId: created._id,
+        balance: randomAmount,
+    })
     const token = jwt.sign({ _id: created._id }, JWT_SECRET)
 
     return res.json({
@@ -151,6 +155,33 @@ router.put("/update", authMiddleware, async (req, res) => {
             ...req.body,
         })
         return res.json({ msg: "user updated successfully" })
+    }
+})
+router.get("/bulk", authMiddleware, async (req, res) => {
+    const filter = req.query.filter
+    const users = await User.find(
+        {
+            $or: [
+                {
+                    firstname: {
+                        $regex: filter,
+                    },
+                },
+                {
+                    lastname: {
+                        $regex: filter,
+                    },
+                },
+            ],
+        },
+        { password: 0, salt: 0, username: 0, __v: 0 }
+    )
+    if (users.length > 0) {
+        res.status(200).json(users)
+    } else {
+        res.status(404).json({
+            msg: "user doesnt exist",
+        })
     }
 })
 
